@@ -10,6 +10,8 @@ from utils.torch_utils import select_device, time_sync
 from models.experimental import attempt_load
 from utils.datasets import letterbox
 
+from matplotlib.animation import FuncAnimation
+
 
 # get camera pipline
 pipeline = rs.pipeline()
@@ -18,6 +20,8 @@ pipeline = rs.pipeline()
 config = rs.config()
 config.enable_stream(rs.stream.depth, 640, 480, rs.format.z16, 30)
 config.enable_stream(rs.stream.color, 640, 480, rs.format.bgr8, 30)
+config.enable_stream(rs.stream.accel, rs.format.motion_xyz32f)
+config.enable_stream(rs.stream.gyro, rs.format.motion_xyz32f)
 
 
 # start image stream
@@ -39,12 +43,13 @@ def align_frames(frames):
 
         if not aligned_depth_frame or not RGB_frame:
             return 
-        # transfrom RGB and depth image to ndarray
+        # transform RGB and depth image to ndarray
         depth_image = np.asanyarray(aligned_depth_frame.get_data())
         RGB_image = np.asanyarray(RGB_frame.get_data())
 
         return aligned_depth_frame, depth_image, RGB_image
-
+########################################
+# YOLOv5 model
 class YOLOv5:
     def __init__(self, config_path = 'config\yolov5s.yaml'):
         with open(config_path, 'r', encoding= 'utf-8') as f:
@@ -164,10 +169,7 @@ if __name__ == '__main__':
             pred, det, boxed_img = model.detect(color_image= RGB_image, depth_image= depth)
             if count % 15 ==0:
                 print('pred shape: {}, pred :{}'.format(pred[0].shape, pred))
-                print('det shape: {}, det :{}'.format(det.shape, det)) 
-                # print(reversed(det))
-                # for *xyxy, conf, class_id in reversed(det):
-                #     print(xyxy,'\n', conf,'\n', class_id)                  
+                print('det shape: {}, det :{}'.format(det.shape, det))                 
             count +=1
             out.write(boxed_img)
             #show image
